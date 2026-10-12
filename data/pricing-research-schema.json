@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "market": "UK",
+  "purpose": "Research-backed, non-binding guidance for traders; never infer prices without verified evidence",
+  "record_fields": {
+    "industry": "string",
+    "service_id": "string",
+    "service_name": "string",
+    "region": "string",
+    "postcode_area": "string or null",
+    "price_min_gbp": "number",
+    "price_max_gbp": "number",
+    "price_unit": "hour|job|room|sqm|visit|other",
+    "sample_size": "integer",
+    "source_name": "string",
+    "source_url": "https URL",
+    "source_type": "published_business_price|directory_guide|reported_quote|other",
+    "observed_at": "YYYY-MM-DD",
+    "checked_at": "YYYY-MM-DD",
+    "notes": "string",
+    "confidence": "high|medium|low",
+    "status": "verified|needs_review|expired"
+  },
+  "publication_rules": [
+    "Do not publish a numeric market range without supporting sources",
+    "Show source links, checked date, pricing unit and region",
+    "Do not mix hourly and fixed-job prices",
+    "Do not claim official industry standards",
+    "Exclude stale or ambiguous sources from published ranges",
+    "Allow traders to override their own price",
+    "Never imply research runs automatically without a configured scheduled job"
+  ],
+  "records": []
+}
