@@ -6,3 +6,28 @@ test('rejects non-member with no records disclosed',async()=>{const api=createAp
 test('member can list only scoped customers',async()=>{const api=createApi({authenticate:async()=>({userId:'u1'}),db:mockDb()});const response=await api(req('GET','/api/organisations/o1/customers'));assert.equal(response.status,200);assert.deepEqual((await response.json()).customers,[])});
 test('read-only member cannot create customer',async()=>{const api=createApi({authenticate:async()=>({userId:'u2'}),db:mockDb('member')});assert.equal((await api(req('POST','/api/organisations/o2/customers',{name:'A'}))).status,403)});
 test('health does not imply production readiness',async()=>{const api=createApi({authenticate:async()=>null,db:mockDb()});assert.deepEqual(await (await api(req('GET','/api/health'))).json(),{status:'staging',live:false})});
+
+
+test('rejects non-JSON customer creation',async()=>{
+ const api=createApi({authenticate:async()=>({userId:'u1'}),db:mockDb()});
+ const response=await api(new Request('https://staging.invalid/api/organisations/o1/customers',{method:'POST',headers:{'content-type':'text/plain'},body:'name=A'}));
+ assert.equal(response.status,415);
+});
+test('rejects oversized customer creation',async()=>{
+ const api=createApi({authenticate:async()=>({userId:'u1'}),db:mockDb()});
+ assert.equal((await api(req('POST','/api/organisations/o1/customers',{name:'A',notes:'x'.repeat(9000)}))).status,413);
+});
+test('rejects invalid email without inserting',async()=>{
+ const api=createApi({authenticate:async()=>({userId:'u1'}),db:mockDb()});
+ assert.equal((await api(req('POST','/api/organisations/o1/customers',{name:'A',email:'not-an-email'}))).status,400);
+});
+test('rejects invalid JSON payload shape',async()=>{
+ const api=createApi({authenticate:async()=>({userId:'u1'}),db:mockDb()});
+ assert.equal((await api(req('POST','/api/organisations/o1/customers',[]))).status,400);
+});
+test('creates a valid customer only for an authorised editor',async()=>{
+ const api=createApi({authenticate:async()=>({userId:'u1'}),db:mockDb()});
+ const response=await api(req('POST','/api/organisations/o1/customers',{name:'Garden Client',email:'garden@example.com'}));
+ assert.equal(response.status,201);
+ assert.ok((await response.json()).id);
+});
