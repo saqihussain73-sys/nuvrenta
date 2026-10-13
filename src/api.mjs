@@ -1,4 +1,4 @@
-import {authorize,validateText,parseMoneyMinor} from './security.mjs';
+import {authorize,validateText} from './security.mjs';
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 export function createApi({authenticate,db}){
  if(typeof authenticate!=='function'||!db)throw new Error('API dependencies required');
@@ -22,8 +22,25 @@ export function createApi({authenticate,db}){
    return row?json({customer:row}):json({error:'Not found'},404);
   }
   if(request.method==='POST'&&!customerId){
+   if(request.headers.get('content-type')?.split(';')[0].trim().toLowerCase()!=='application/json')return json({error:'JSON required'},415);
+   const declaredLength=Number(request.headers.get('content-length'));
+   if(Number.isFinite(declaredLength)&&declaredLength>8192)return json({error:'Request too large'},413);
    if(!authorize([{user_id:identity.userId,organisation_id:orgId,role:membership.role}],identity.userId,orgId,['owner','admin']))return json({error:'Forbidden'},403);
-   let input;try{input=await request.json();const name=validateText(input.name,160);const email=input.email?validateText(input.email,254):null;const phone=input.phone?validateText(input.phone,50):null;const address=input.address?validateText(input.address,500):null;const id=crypto.randomUUID();await db.prepare('INSERT INTO customers (id,organisation_id,name,email,phone,address) VALUES (?,?,?,?,?,?)').bind(id,orgId,name,email,phone,address).run();return json({id},201)}catch{return json({error:'Invalid request'},400)}
+   let input;
+   try {
+    const raw=await request.text();
+    if(new TextEncoder().encode(raw).length>8192)return json({error:'Request too large'},413);
+    input=JSON.parse(raw);
+    if(!input||typeof input!=='object'||Array.isArray(input))throw new Error('Invalid JSON object');
+    input={name:validateText(input.name,160),
+     email:input.email==null||input.email===''?null:validateText(input.email,254),
+     phone:input.phone==null||input.phone===''?null:validateText(input.phone,50),
+     address:input.address==null||input.address===''?null:validateText(input.address,500)};
+    if(input.email&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(input.email))throw new Error('Invalid email');
+   } catch {return json({error:'Invalid request'},400)}
+   const id=crypto.randomUUID();
+   await db.prepare('INSERT INTO customers (id,organisation_id,name,email,phone,address) VALUES (?,?,?,?,?,?)').bind(id,orgId,input.name,input.email,input.phone,input.address).run();
+   return json({id},201);
   }
   if(request.method==='DELETE'&&customerId){
    if(!['owner','admin'].includes(membership.role))return json({error:'Forbidden'},403);
