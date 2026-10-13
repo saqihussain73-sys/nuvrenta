@@ -20,7 +20,8 @@ test('workspace includes core customer and document screens',()=>{
 });
 test('workspace escapes user content in printed document',()=>{
  assert.match(workspace,/const safe=/);
- for(const expression of ['d.customer.name','d.service','d.notes','d.business.businessName']) assert.ok(workspace.includes('safe('+expression+')'),expression);
+ for(const expression of ['d.customer.name','d.service','d.notes']) assert.ok(workspace.includes('safe('+expression+')'),expression);
+ assert.match(workspace,/safe\(d\.business\.businessName\s*\|\|\s*'Your business'\)/);
 });
 test('do not misrepresent prototype as a production account system',()=>{
  assert.doesNotMatch(workspace,/type="password"/);
