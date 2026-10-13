@@ -36,7 +36,7 @@ export function createApi({authenticate,db}){
      email:input.email==null||input.email===''?null:validateText(input.email,254),
      phone:input.phone==null||input.phone===''?null:validateText(input.phone,50),
      address:input.address==null||input.address===''?null:validateText(input.address,500)};
-    if(input.email&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(input.email))throw new Error('Invalid email');
+    if(input.email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email))throw new Error('Invalid email');
    } catch {return json({error:'Invalid request'},400)}
    const id=crypto.randomUUID();
    await db.prepare('INSERT INTO customers (id,organisation_id,name,email,phone,address) VALUES (?,?,?,?,?,?)').bind(id,orgId,input.name,input.email,input.phone,input.address).run();
