@@ -1,0 +1,8 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {createApi} from '../src/api.mjs';
+function mockDb(role='owner'){return {prepare(sql){return {bind(...args){return {async first(){if(sql.includes('FROM memberships'))return role?{role}:null;return null},async all(){return {results:[]}},async run(){return {meta:{changes:1}}}}}}}}}
+const req=(method,path,body)=>new Request('https://staging.invalid'+path,{method,headers:body?{'content-type':'application/json'}:{},body:body?JSON.stringify(body):undefined});
+test('rejects missing authentication',async()=>{const api=createApi({authenticate:async()=>null,db:mockDb()});assert.equal((await api(req('GET','/api/organisations/o1/customers'))).status,401)});
+test('rejects non-member with no records disclosed',async()=>{const api=createApi({authenticate:async()=>({userId:'u1'}),db:mockDb(null)});assert.equal((await api(req('GET','/api/organisations/o2/customers'))).status,404)});
+test('member can list only scoped customers',async()=>{const api=createApi({authenticate:async()=>({userId:'u1'}),db:mockDb()});const response=await api(req('GET','/api/organisations/o1/customers'));assert.equal(response.status,200);assert.deepEqual((await response.json()).customers,[])});
+test('read-only member cannot create customer',async()=>{const api=createApi({authenticate:async()=>({userId:'u2'}),db:mockDb('member')});assert.equal((await api(req('POST','/api/organisations/o2/customers',{name:'A'}))).status,403)});
+test('health does not imply production readiness',async()=>{const api=createApi({authenticate:async()=>null,db:mockDb()});assert.deepEqual(await (await api(req('GET','/api/health'))).json(),{status:'staging',live:false})});
